@@ -24,6 +24,8 @@ import com.github.czyzby.websocket.WebSockets;
 import java.util.HashMap;
 import java.util.Map;
 
+import jdk.nashorn.internal.parser.JSONParser;
+
 public class Level1Screen implements Screen {
     final IetiGame game;
     String userid = "";
@@ -243,7 +245,7 @@ public class Level1Screen implements Screen {
             touchPos.set(Gdx.input.getX(i), Gdx.input.getY(i), 0);
             // traducció de coordenades reals (depen del dispositiu) a 800x480
             game.camera.unproject(touchPos);
-            if (up.contains(touchPos.x, touchPos.y)) {
+            if( up.contains(touchPos.x,touchPos.y) ) {
                 return UP;
             } else if (down.contains(touchPos.x, touchPos.y)) {
                 return DOWN;
@@ -312,6 +314,7 @@ public class Level1Screen implements Screen {
                 ObjectMapper mapper = new ObjectMapper();
                 try {
                     PosMessage pos = mapper.readValue(packet,PosMessage.class);
+                    //TODO: JSONParser parser = new JSONParser();
                     if( pos.id.equals(userid) ) {
                         // es un missatge propi nostre, el descartem
                         return false;

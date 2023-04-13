@@ -1,4 +1,3 @@
-const { v4: uuidv4 } = require('uuid')
 const express = require('express')
 const http = require('http');
 const WebSocket = require('ws')
@@ -6,9 +5,10 @@ const WebSocket = require('ws')
 const app = express()
 const httpServer = http.createServer(app);
 const wss = new WebSocket.Server({ server: httpServer })
-const socketsClients = new Map()
 
-const port = 3000
+const { v4: uuidv4 } = require('uuid')
+const port = 8888
+var clients = {}
 
 // HTTP ROUTES
 app.use(express.static('public'))
@@ -16,37 +16,33 @@ app.get('/',root);
 
 
 // WS client connections
-wss.on('connection', (ws) => {
- console.log("Client connected")
+wss.on('connection', function connection(ws) {
+  var userid = uuidv4();
+  console.log('Nova connexió: '+userid);
+  clients[userid] = { "id":userid, "ws":ws, pos:{} };
+  ws.send("Benvingut id="+userid);
+  // TODO: crear totems i actualitzar
 
- // Add client to the clients list
- const id = uuidv4()
- const color = Math.floor(Math.random() * 360)
- const metadata = { id, color }
- socketsClients.set(ws, metadata)
-})
+  ws.on('close', function close() {
+    delete clients[userid];
+    // TODO: esborrar totems?
+  })
 
-// What to do when a client is disconnected
-wss.on("close", () => {
-   socketsClients.delete(wss)
-})
+  ws.on('error', console.error);
 
-// WS messages
-wss.on('message', (bufferedMessage) => {
-   var messageAsString = bufferedMessage.toString()
-   var messageAsObject = {}
-  
-   try { messageAsObject = JSON.parse(messageAsString) }
-   catch (e) { console.log("Could not parse bufferedMessage from WS message") }
+  ws.on('message', function message(data) {
+    try {
+      var posData = JSON.parse(data);
+      posData.id = userid;
+      console.log('Pos data: %s', JSON.stringify(posData));
+      // retransmetem posició a tothom
+      broadcast(JSON.stringify(posData));
+    } catch (e) {
+      console.log("ERROR descodificant pos: "+e)
+    }
+  });
 
-   if (messageAsObject.type == "bounce") {
-     var rst = { type: "response", text: `Rebotar Websocket: '${messageAsObject.text}'` }
-     ws.send(JSON.stringify(rst))
-   } else if (messageAsObject.type == "broadcast") {
-     var rst = { type: "response", text: `Broadcast Websocket: '${messageAsObject.text}'` }
-     broadcast(rst)
-   }
-})
+});
 
 
 // SERVER START
@@ -58,19 +54,19 @@ function appListen () {
 // HTTP
 /////////////////////////////////
 async function root(req,res) {
-    res.send("Hello");
+    res.send("IETI Game WebSocket Server");
 }
-
 
 
 // WS : Web Sockets
 /////////////////////////////////
 async function broadcast (obj) {
- wss.clients.forEach((client) => {
-   if (client.readyState === WebSocket.OPEN) {
-     var messageAsString = JSON.stringify(obj)
-     client.send(messageAsString)
-   }
- })
+  for( var id in clients ) {
+    var client = clients[id];
+    //if (client.readyState === WebSocket.OPEN) {
+      var messageAsString = JSON.stringify(obj)
+      client.ws.send(obj);
+    //}
+  }
 }
 

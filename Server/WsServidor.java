@@ -23,9 +23,6 @@ public class WsServidor extends WebSocketServer {
 
     static BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
-
-
-
     static class PosMessage {
         public int posx;
         public int posy;
